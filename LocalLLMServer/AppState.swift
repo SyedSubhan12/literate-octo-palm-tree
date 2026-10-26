@@ -130,13 +130,20 @@ final class AppState: ObservableObject {
 
     // MARK: Server
 
+    private var advertise = true
+
     func startServer() {
+        advertise = true
+        launchServer()
+    }
+
+    private func launchServer() {
         guard let p = UInt16(port), p >= 1024 else { serverMessage = "Invalid port (use 1024–65535)"; return }
         ud.set(port, forKey: "port")
         ip = Self.localIP()
         serverMessage = "Starting…"
         do {
-            try server.start(port: p, onState: { [weak self] st in
+            try server.start(port: p, advertise: advertise, onState: { [weak self] st in
                 Task { @MainActor in self?.serverState(st) }
             }, handler: { [weak self] req, r in
                 await self?.handle(req, r)
@@ -162,6 +169,13 @@ final class AppState: ObservableObject {
             UIApplication.shared.isIdleTimerDisabled = true   // keep screen awake while serving
         case .failed(let e):
             server.stop()
+            if advertise, !(e == .posix(.EADDRINUSE)) {
+                // Bonjour advertising can fail (e.g. -65569); retry once without it.
+                advertise = false
+                serverMessage = "Retrying without Bonjour…"
+                launchServer()
+                return
+            }
             serverRunning = false
             UIApplication.shared.isIdleTimerDisabled = false
             if case .posix(let code) = e, code == .EADDRINUSE {
