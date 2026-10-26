@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum Section: String, CaseIterable, Identifiable {
+enum AppSection: String, CaseIterable, Identifiable {
     case chat = "Chat", model = "Model", server = "API Server"
     var id: String { rawValue }
     var icon: String {
@@ -14,11 +14,11 @@ enum Section: String, CaseIterable, Identifiable {
 
 struct ContentView: View {
     @EnvironmentObject var app: AppState
-    @State private var section: Section? = .model
+    @State private var section: AppSection? = .model
 
     var body: some View {
         NavigationSplitView {
-            List(Section.allCases, selection: $section) { s in
+            List(AppSection.allCases, selection: $section) { s in
                 Label(s.rawValue, systemImage: s.icon).tag(s)
             }
             .navigationTitle("LocalLLM")
