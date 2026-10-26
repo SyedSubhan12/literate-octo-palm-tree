@@ -130,10 +130,12 @@ final class AppState: ObservableObject {
 
     // MARK: Server
 
-    private var advertise = true
+    private var advertise = false   // Bonjour advertising disabled: it caused -65569 failures
+    private var retries = 0
 
     func startServer() {
-        advertise = true
+        advertise = false
+        retries = 0
         launchServer()
     }
 
@@ -174,6 +176,15 @@ final class AppState: ObservableObject {
                 advertise = false
                 serverMessage = "Retrying without Bonjour…"
                 launchServer()
+                return
+            }
+            if retries < 3, !(e == .posix(.EADDRINUSE)) {
+                retries += 1
+                serverMessage = "Listener dropped; restarting (\(retries)/3)…"
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    self?.launchServer()
+                }
                 return
             }
             serverRunning = false
