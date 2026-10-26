@@ -61,13 +61,13 @@ final class HTTPServer: @unchecked Sendable {
     private var listener: NWListener?
     private var conns = 0
 
-    func start(port: UInt16, onState: @escaping @Sendable (NWListener.State) -> Void, handler: @escaping Handler) throws {
+    func start(port: UInt16, advertise: Bool = true, onState: @escaping @Sendable (NWListener.State) -> Void, handler: @escaping Handler) throws {
         stop()
         let params = NWParameters.tcp
         params.requiredInterfaceType = .wifi   // LAN only; never cellular
         guard let p = NWEndpoint.Port(rawValue: port) else { throw NWError.posix(.EINVAL) }
         let l = try NWListener(using: params, on: p)
-        l.service = NWListener.Service(name: "LocalLLM", type: "_http._tcp")
+        if advertise { l.service = NWListener.Service(name: "LocalLLM", type: "_http._tcp") }
         l.stateUpdateHandler = onState
         l.newConnectionHandler = { [weak self] c in self?.accept(c, handler) }
         listener = l
