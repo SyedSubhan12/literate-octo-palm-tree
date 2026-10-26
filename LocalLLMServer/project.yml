@@ -1,0 +1,38 @@
+name: LocalLLMServer
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  MLXSwiftLM:
+    url: https://github.com/ml-explore/mlx-swift-lm
+    from: 2.29.1
+targets:
+  LocalLLMServer:
+    type: application
+    platform: iOS
+    sources: [LocalLLMServer]
+    dependencies:
+      - package: MLXSwiftLM
+        product: MLXLLM
+      - package: MLXSwiftLM
+        product: MLXLMCommon
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.localllmserver
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "2"
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+    info:
+      path: LocalLLMServer/Info.plist
+      properties:
+        CFBundleDisplayName: LocalLLM
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSLocalNetworkUsageDescription: LocalLLM serves its on-device AI model to other devices on your Wi-Fi network when you start the server.
+        NSBonjourServices:
+          - _http._tcp
