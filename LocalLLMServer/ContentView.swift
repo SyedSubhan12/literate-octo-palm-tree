@@ -164,6 +164,7 @@ struct ServerView: View {
                 }
                 Text("Model: \(app.modelLoaded ? app.modelID : "none")")
                 Text("Active requests: \(app.activeRequests)")
+                Text("Build 3 (no Bonjour, auto-restart)").font(.footnote).foregroundStyle(.secondary)
             }
             Section("Address") {
                 Text(app.baseURL).textSelection(.enabled)
