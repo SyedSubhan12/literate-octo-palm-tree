@@ -257,27 +257,22 @@ final class AppState: ObservableObject {
         let msgs = cr.messages
 
         if cr.stream == true {
-            func chunk(_ delta: [String: Any], _ finish: Any) -> String {
-                let o: [String: Any] = ["id": id, "object": "chat.completion.chunk", "created": created, "model": mid,
-                                        "choices": [["index": 0, "delta": delta, "finish_reason": finish]]]
-                return String(data: (try? JSONSerialization.data(withJSONObject: o)) ?? Data(), encoding: .utf8) ?? "{}"
-            }
             r.beginSSE()
-            r.sse(chunk(["role": "assistant", "content": ""], NSNull()))
+            r.sse(sseChunk(id, created, mid, ["role": "assistant", "content": ""], NSNull()))
             let count = Counter()
             let work = Task {
                 try await engine.generate(messages: msgs, temperature: temp, maxTokens: maxTok) { s in
                     count.n += 1
-                    r.sse(chunk(["content": s], NSNull()))
+                    r.sse(sseChunk(id, created, mid, ["content": s], NSNull()))
                 }
             }
             r.onClose = { work.cancel() }   // client disconnected → stop generating
             let result = await work.result
             await engine.end()
             if case .failure = result, !work.isCancelled {
-                r.sse(chunk(["content": "\n[generation error]"], NSNull()))
+                r.sse(sseChunk(id, created, mid, ["content": "\n[generation error]"], NSNull()))
             }
-            r.sse(chunk([:], count.n >= maxTok ? "length" : "stop"))
+            r.sse(sseChunk(id, created, mid, [:], count.n >= maxTok ? "length" : "stop"))
             r.sse("[DONE]")
             r.endSSE()
             return 200
@@ -302,4 +297,11 @@ final class AppState: ObservableObject {
             return fail(r, 500, "Generation failed (possibly out of memory). Try a smaller model or fewer tokens.", "server_error")
         }
     }
+}
+
+/// Free function (not main-actor isolated) so streaming callbacks can use it.
+func sseChunk(_ id: String, _ created: Int, _ model: String, _ delta: [String: Any], _ finish: Any) -> String {
+    let o: [String: Any] = ["id": id, "object": "chat.completion.chunk", "created": created, "model": model,
+                            "choices": [["index": 0, "delta": delta, "finish_reason": finish]]]
+    return String(data: (try? JSONSerialization.data(withJSONObject: o)) ?? Data(), encoding: .utf8) ?? "{}"
 }
